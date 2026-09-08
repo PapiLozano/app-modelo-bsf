@@ -1,0 +1,29 @@
+name: bsf_app
+description: App de conteo y clasificación de larvas BSF (RF-DETR vía ONNX)
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  camera: ^0.11.0+2
+  image: ^4.2.0
+  flutter_onnxruntime: ^1.8.0
+  path_provider: ^2.1.4
+  intl: ^0.19.0
+  uuid: ^4.4.2
+  image_picker: ^1.1.2
+  opencv_core: ^1.4.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/models/inference_model.onnx
