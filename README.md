@@ -1,3 +1,6 @@
+El modelo esta en la ruta : assets/models -> model_inference.onnx
+
+
 # app
 
 A new Flutter project.
