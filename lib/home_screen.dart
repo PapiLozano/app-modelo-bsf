@@ -5,6 +5,7 @@ import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'camera_screen.dart';
 import 'models.dart';
@@ -98,13 +99,31 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       decoded = img.bakeOrientation(decoded);
 
+      // Acotamos la resolución de TRABAJO (no solo la del modelo, que ya
+      // se reduce a 504x504 dentro de RfDetrService). Lo que de verdad
+      // pesa es el decode de máscaras + findContours + esqueleto, que se
+      // hacen a la resolución de "decoded" -> si viene una foto de
+      // cámara de 12-48MP sin recortar, cada larva detectada arrastra
+      // ese costo. 1600px de lado más largo es más que suficiente para
+      // ver el detalle de una larva y mantiene todo rápido.
+      decoded = _capWorkingResolution(decoded, 1600);
+
+      // Guardamos la versión YA acotada (no el archivo gigante original)
+      // para que el análisis, las medidas y la visualización usen
+      // siempre la misma resolución -> evita desalinear contornos.
+      final workDir = await getApplicationDocumentsDirectory();
+      final workingPath =
+          '${workDir.path}/analisis_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final workingFile = File(workingPath);
+      await workingFile.writeAsBytes(img.encodeJpg(decoded, quality: 92));
+
       final output = await _service.analyze(decoded);
 
       final record = AnalysisRecord(
         id: _uuid.v4(),
         label: 'Muestra ${_records.length + 1}',
         timestamp: DateTime.now(),
-        imageFile: file,
+        imageFile: workingFile,
         imageWidth: decoded.width,
         imageHeight: decoded.height,
         detections: output.detections,
@@ -125,6 +144,14 @@ class _HomeScreenState extends State<HomeScreen> {
     } finally {
       if (mounted) setState(() => _analyzing = false);
     }
+  }
+
+  img.Image _capWorkingResolution(img.Image image, int maxSide) {
+    final longest = math.max(image.width, image.height);
+    if (longest <= maxSide) return image;
+    return image.width >= image.height
+        ? img.copyResize(image, width: maxSide)
+        : img.copyResize(image, height: maxSide);
   }
 
   void _deleteRecord(AnalysisRecord record) {
